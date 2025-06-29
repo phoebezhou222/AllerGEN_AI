@@ -50,7 +50,7 @@ interface LocalAllergen {
 
 interface ChatMessage {
   id: string;
-  content: string;
+  text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
 }
@@ -94,6 +94,8 @@ const Analysis: React.FC = () => {
   const [testKitSuggestions, setTestKitSuggestions] = useState<string>('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [testKitLoading, setTestKitLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<'ingredients' | 'chatbot'>('ingredients');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
@@ -145,6 +147,10 @@ const Analysis: React.FC = () => {
     // Sort by frequency (highest frequency first)
     return allergens.sort((a, b) => b.frequency - a.frequency);
   }, [logs, riskLevels, safeFoodIngredients]);
+
+  // Define topAllergenNames in the component scope
+  const topAllergens = localAllergens.slice(0, 5);
+  const topAllergenNames = topAllergens.map(a => a.ingredient);
 
   // Save AI analysis results to Firebase
   const saveAiAnalysisResults = useCallback(async (results: Record<string, string>) => {
@@ -425,189 +431,134 @@ const Analysis: React.FC = () => {
 
   // Analyze individual ingredient with AI
   const analyzeIngredient = useCallback(async (ingredient: string, allergen: LocalAllergen) => {
-    if (!user || aiLoadingStates[ingredient]) return;
-    
-    setAiLoadingStates(prev => ({ ...prev, [ingredient]: true }));
+    if (!ingredient.trim()) return;
     
     try {
       const analysis = await GroqService.analyzeIngredient(ingredient, allergen);
       
       if (analysis.trim()) {
         setAiAnalysisResults(prev => ({ ...prev, [ingredient]: analysis }));
-        // Save to Firebase
-        const updatedResults = { ...aiAnalysisResults, [ingredient]: analysis };
-        saveAiAnalysisResults(updatedResults);
-      } else {
-        throw new Error('Empty response from API');
       }
-      
     } catch (error) {
       console.error(`Error analyzing ingredient ${ingredient}:`, error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to analyze ingredient';
-      setAiAnalysisResults(prev => ({ ...prev, [ingredient]: `Error: ${errorMessage}` }));
-      
-      // Save error state to Firebase
-      const updatedResults = { ...aiAnalysisResults, [ingredient]: `Error: ${errorMessage}` };
-      saveAiAnalysisResults(updatedResults);
-    } finally {
-      setAiLoadingStates(prev => ({ ...prev, [ingredient]: false }));
     }
-  }, [user, aiLoadingStates, aiAnalysisResults, saveAiAnalysisResults]);
+  }, []);
 
   // Analyze risk level for an ingredient
-  const analyzeRiskLevel = useCallback(async (ingredient: string, allergen: LocalAllergen) => {
-    if (!user || riskLoadingStates[ingredient]) return;
-    
-    setRiskLoadingStates(prev => ({ ...prev, [ingredient]: true }));
+  const analyzeRiskLevel = useCallback(async (ingredient: string) => {
+    if (!ingredient.trim()) return;
     
     try {
       const riskLevel = await GroqService.analyzeRiskLevel(ingredient);
       
-        setRiskLevels(prev => ({ ...prev, [ingredient]: riskLevel }));
-        // Save to Firebase
-        const updatedLevels = { ...riskLevels, [ingredient]: riskLevel };
-        saveRiskLevels(updatedLevels);
+      setRiskLevels(prev => ({ ...prev, [ingredient]: riskLevel }));
+      // Save to Firebase
+      const updatedLevels = { ...riskLevels, [ingredient]: riskLevel };
+      saveRiskLevels(updatedLevels);
       
     } catch (error) {
       console.error(`Error analyzing risk level for ${ingredient}:`, error);
-      // Set a default risk level on error
-      const defaultRisk = 50;
-      setRiskLevels(prev => ({ ...prev, [ingredient]: defaultRisk }));
-      
-      // Save default to Firebase
-      const updatedLevels = { ...riskLevels, [ingredient]: defaultRisk };
-      saveRiskLevels(updatedLevels);
-    } finally {
-      setRiskLoadingStates(prev => ({ ...prev, [ingredient]: false }));
     }
-  }, [user, riskLoadingStates, riskLevels, saveRiskLevels]);
+  }, [riskLevels, saveRiskLevels]);
 
   // Generate overall AI summary
   const generateOverallSummary = useCallback(async () => {
-    if (localAllergens.length === 0) return;
+    if (logs.length === 0 || localAllergens.length === 0) return;
     
-    setSummaryLoading(true);
     try {
-      // Add a small delay to ensure data is ready
-      await new Promise(resolve => setTimeout(resolve, 500));
+      setSummaryLoading(true);
       
       const topAllergens = localAllergens.slice(0, 5);
-      const summary = await GroqService.generateOverallSummary(topAllergens, logs.length);
+      const allergenNames = topAllergens.map(a => a.ingredient);
+      const summary = await GroqService.generateOverallSummary(allergenNames, logs.length);
       
       if (summary.trim()) {
         console.log('Successfully generated overall summary:', summary);
         setOverallSummary(summary);
-        // Save successful results to Firebase
-        saveOverallSummary(summary);
-          } else {
-            throw new Error('Failed to generate summary - empty response');
+        setSummaryError(null);
+      } else {
+        setSummaryError('Failed to generate summary');
       }
-      
     } catch (error) {
       console.error('Error generating overall summary:', error);
-      const errorMessage = error instanceof Error && error.message.includes('rate limit') 
-        ? 'API rate limit exceeded. Please try again later.'
-        : 'Unable to generate summary at this time.';
-      setOverallSummary(errorMessage);
-      // Save error state to Firebase
-      saveOverallSummary(errorMessage);
+      setSummaryError('Error generating summary');
     } finally {
       setSummaryLoading(false);
     }
-  }, [localAllergens, logs, saveOverallSummary]);
+  }, [localAllergens, logs]);
 
   // Generate test kit suggestions
   const generateTestKitSuggestions = useCallback(async () => {
     if (localAllergens.length === 0) return;
     
-    setTestKitLoading(true);
     try {
+      setTestKitLoading(true);
       const topAllergens = localAllergens.slice(0, 5);
-      const suggestions = await GroqService.generateTestKitSuggestions(topAllergens);
+      const allergenNames = topAllergens.map(a => a.ingredient);
+      const suggestions = await GroqService.generateTestKitSuggestions(allergenNames);
       
       if (suggestions.trim()) {
         setTestKitSuggestions(suggestions);
-        // Save successful results to Firebase
-        saveTestKitSuggestions(suggestions);
+        setSuggestionsError(null);
       } else {
-        throw new Error('Failed to generate test kit suggestions - empty response');
+        setSuggestionsError('Failed to generate suggestions');
       }
-      
     } catch (error) {
       console.error('Error generating test kit suggestions:', error);
-      const errorMessage = error instanceof Error && error.message.includes('rate limit') 
-        ? 'API rate limit exceeded. Please try again later.'
-        : 'Unable to generate test kit recommendations at this time.';
-      setTestKitSuggestions(errorMessage);
-      // Save error state to Firebase
-      saveTestKitSuggestions(errorMessage);
+      setSuggestionsError('Error generating suggestions');
     } finally {
       setTestKitLoading(false);
     }
-  }, [localAllergens, saveTestKitSuggestions]);
+  }, []);
 
   // Regenerate overall AI summary
   const regenerateOverallSummary = useCallback(async () => {
-    if (localAllergens.length === 0) return;
+    if (logs.length === 0 || localAllergens.length === 0) return;
     
-    setSummaryLoading(true);
-    setOverallSummary(''); // Clear existing summary
     try {
+      setSummaryLoading(true);
       const topAllergens = localAllergens.slice(0, 5);
-      const summary = await GroqService.generateOverallSummary(topAllergens, logs.length);
+      const allergenNames = topAllergens.map(a => a.ingredient);
+      const summary = await GroqService.generateOverallSummary(allergenNames, logs.length);
       
       if (summary.trim()) {
         console.log('Successfully regenerated overall summary:', summary);
         setOverallSummary(summary);
-        // Save successful results to Firebase
-        saveOverallSummary(summary);
+        setSummaryError(null);
       } else {
-        throw new Error('Failed to generate summary - empty response');
+        setSummaryError('Failed to regenerate summary');
       }
-      
     } catch (error) {
       console.error('Error regenerating overall summary:', error);
-      const errorMessage = error instanceof Error && error.message.includes('rate limit') 
-        ? 'API rate limit exceeded. Please try again later.'
-        : 'Unable to generate summary at this time.';
-      setOverallSummary(errorMessage);
-      // Save error state to Firebase
-      saveOverallSummary(errorMessage);
+      setSummaryError('Error regenerating summary');
     } finally {
       setSummaryLoading(false);
-      }
-  }, [localAllergens, logs, saveOverallSummary]);
+    }
+  }, [localAllergens, logs]);
 
   // Regenerate test kit suggestions
   const regenerateTestKitSuggestions = useCallback(async () => {
     if (localAllergens.length === 0) return;
     
-    setTestKitLoading(true);
-    setTestKitSuggestions(''); // Clear existing suggestions
     try {
+      setTestKitLoading(true);
       const topAllergens = localAllergens.slice(0, 5);
-      const suggestions = await GroqService.generateTestKitSuggestions(topAllergens);
+      const allergenNames = topAllergens.map(a => a.ingredient);
+      const suggestions = await GroqService.generateTestKitSuggestions(allergenNames);
       
       if (suggestions.trim()) {
         setTestKitSuggestions(suggestions);
-        // Save successful results to Firebase
-        saveTestKitSuggestions(suggestions);
-          } else {
-            throw new Error('Failed to generate test kit suggestions - empty response');
+        setSuggestionsError(null);
+      } else {
+        setSuggestionsError('Failed to regenerate suggestions');
       }
-      
     } catch (error) {
       console.error('Error regenerating test kit suggestions:', error);
-      const errorMessage = error instanceof Error && error.message.includes('rate limit') 
-        ? 'API rate limit exceeded. Please try again later.'
-        : 'Unable to generate test kit recommendations at this time.';
-      setTestKitSuggestions(errorMessage);
-      // Save error state to Firebase
-      saveTestKitSuggestions(errorMessage);
+      setSuggestionsError('Error regenerating suggestions');
     } finally {
       setTestKitLoading(false);
     }
-  }, [localAllergens, saveTestKitSuggestions]);
+  }, []);
 
   // Send chat message
   const sendChatMessage = useCallback(async (message: string) => {
@@ -615,7 +566,7 @@ const Analysis: React.FC = () => {
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: message.trim(),
+      text: message.trim(),
       sender: 'user',
       timestamp: new Date()
     };
@@ -635,7 +586,7 @@ const Analysis: React.FC = () => {
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: response,
+        text: response,
         sender: 'bot',
         timestamp: new Date()
       };
@@ -646,7 +597,7 @@ const Analysis: React.FC = () => {
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error while processing your message. Please try again.',
+        text: 'Sorry, I encountered an error while processing your message. Please try again.',
         sender: 'bot',
         timestamp: new Date()
       };
@@ -662,7 +613,7 @@ const Analysis: React.FC = () => {
     if (activeSection === 'chatbot' && chatMessages.length === 0) {
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
-        content: `Hello! I'm your AI allergy assistant. I have access to your allergy data including ${logs.length} logs and can help you understand your patterns, answer questions about your allergies, and provide insights. What would you like to know?`,
+        text: `Hello! I'm your AI allergy assistant. I have access to your allergy data including ${logs.length} logs and can help you understand your patterns, answer questions about your allergies, and provide insights. What would you like to know?`,
         sender: 'bot',
         timestamp: new Date()
       };
@@ -677,7 +628,7 @@ const Analysis: React.FC = () => {
     // Re-initialize with welcome message
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
-      content: `Hello! I'm your AI allergy assistant. I have access to your allergy data including ${logs.length} logs and can help you understand your patterns, answer questions about your allergies, and provide insights. What would you like to know?`,
+      text: `Hello! I'm your AI allergy assistant. I have access to your allergy data including ${logs.length} logs and can help you understand your patterns, answer questions about your allergies, and provide insights. What would you like to know?`,
       sender: 'bot',
       timestamp: new Date()
     };
@@ -689,7 +640,7 @@ const Analysis: React.FC = () => {
     if (localAllergens.length > 0) {
       localAllergens.slice(0, 10).forEach(allergen => {
         if (!riskLevels[allergen.ingredient] && !riskLoadingStates[allergen.ingredient]) {
-          analyzeRiskLevel(allergen.ingredient, allergen);
+          analyzeRiskLevel(allergen.ingredient);
         }
       });
     }
@@ -700,7 +651,7 @@ const Analysis: React.FC = () => {
     if (localAllergens.length > 0 && riskLevelsLoaded) {
       localAllergens.slice(0, 10).forEach(allergen => {
         if (!riskLevels[allergen.ingredient] && !riskLoadingStates[allergen.ingredient]) {
-          analyzeRiskLevel(allergen.ingredient, allergen);
+          analyzeRiskLevel(allergen.ingredient);
         }
       });
     }
@@ -1098,7 +1049,7 @@ const Analysis: React.FC = () => {
                         
                         {!riskLevels[allergen.ingredient] && !riskLoadingStates[allergen.ingredient] && (
             <button
-                            onClick={() => analyzeRiskLevel(allergen.ingredient, allergen)}
+                            onClick={() => analyzeRiskLevel(allergen.ingredient)}
               style={{
                               background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
                               color: '#fff',
@@ -1536,7 +1487,7 @@ const Analysis: React.FC = () => {
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                       border: message.sender === 'bot' ? '1px solid #e2e8f0' : 'none'
                     }}>
-                      {message.content}
+                      {message.text}
                     </div>
                   </div>
                 ))}

@@ -392,7 +392,7 @@ const LogReaction: React.FC = () => {
                   <ClipboardCheck size={48} />
               </div>
               <h1 className="log-reaction-title">Log a New Condition</h1>
-              <p className="log-reaction-desc">Quickly record a new allergic condition or symptom event. Stay on top of your health and help your care team with accurate, up-to-date information.</p>
+              <p className="log-reaction-desc">Track symptoms or allergic reactions to identify patterns and potential triggers. The more you log, the better our AI can analyze your unique needs.</p>
               <button className="log-reaction-btn" onClick={() => setStep(1)}>Begin Logging</button>
             </div>
 
@@ -402,7 +402,7 @@ const LogReaction: React.FC = () => {
                   <CheckCircle size={48} />
                 </div>
                 <h1 className="log-reaction-title">Log Safe Food</h1>
-                <p className="log-reaction-desc">Record foods that you've safely consumed without any allergic reactions. This helps improve your allergen analysis by excluding safe ingredients.</p>
+                <p className="log-reaction-desc">Help refine your allergen profile by recording foods you tolerate well. This improves accuracy by ruling out non-triggers.</p>
                 <button className="log-reaction-btn" onClick={() => setSafeFoodStep(1)}>Begin Logging</button>
               </div>
             </div>

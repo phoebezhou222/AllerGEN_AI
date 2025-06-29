@@ -821,7 +821,7 @@ const Analysis: React.FC = () => {
               Allergen Ranking & Risk Prediction
             </h1>
             <p style={{ color: '#64748b', fontSize: 18, textAlign: 'center', maxWidth: 600 }}>
-              AI-powered analysis of your allergy patterns to identify and rank the most likely allergens
+              See which substances pose the highest risk based on your reaction history.
             </p>
           </div>
 

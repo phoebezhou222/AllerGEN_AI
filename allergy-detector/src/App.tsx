@@ -6,7 +6,6 @@ import Header from './Header';
 import HeroSection from './HeroSection';
 import UploadDemo from './UploadDemo';
 import HowItWorks from './HowItWorks';
-import Features from './Features';
 import Testimonials from './Testimonials';
 import PricingPlan from './PricingPlan';
 import Footer from './Footer';
@@ -26,7 +25,6 @@ function MainPage() {
       <HeroSection />
       <UploadDemo />
       <HowItWorks />
-      <Features />
       <PricingPlan />
       <Testimonials />
     </>

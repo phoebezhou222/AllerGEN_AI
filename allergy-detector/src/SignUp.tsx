@@ -102,8 +102,8 @@ const SignUp: React.FC = () => {
         <div className="signup-content">
           <div className="signup-card">
             <div className="signup-header">
-              <img src={require('./A_logo_in_vector_graphic_format_is_displayed_on_a_-removebg-preview (1).png')} alt="AllergyGen AI Logo" style={{height: '2.5rem', width: '2.5rem', objectFit: 'contain', marginBottom: '0.5rem'}} />
-              <h1>AllergyGen AI</h1>
+              <img src={require('./A_logo_in_vector_graphic_format_is_displayed_on_a_-removebg-preview (1).png')} alt="AllerGEN AI Logo" style={{height: '3.2rem', width: '3.2rem', objectFit: 'contain', marginBottom: '0.5rem'}} />
+              <h1>AllerGEN AI</h1>
               <p>Create your clinical account</p>
             </div>
             <form className="signup-form" onSubmit={handleSubmit}>

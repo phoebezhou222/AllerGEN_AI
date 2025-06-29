@@ -20,9 +20,9 @@ const HeroSection: React.FC = () => {
   return (
     <section className="hero-section" id="hero" aria-labelledby="hero-title">
       <div className="hero-content">
-        <h1 id="hero-title">Advanced Allergen Detection System</h1>
+        <h1 id="hero-title">Streamline allergy assessment. Empower your patients with data.</h1>
         <p className="hero-subheadline">
-          Leverage AI-powered ingredient analysis to identify potential allergens and maintain dietary safety protocols.
+          AllerGEN AI helps patients systematically track symptoms and exposures to identify potential allergens before testing — providing clear, structured reports that support clinical decisions.
         </p>
         <div className="hero-ctas">
           <a href="#upload" className="btn btn-primary">Begin Analysis</a>

@@ -101,8 +101,8 @@ const Header: React.FC = () => {
       <div className="header-container">
         <div className="header-logo">
           <button onClick={handleLogoClick} className="logo-button" style={{display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>
-            <img src={require('./A_logo_in_vector_graphic_format_is_displayed_on_a_-removebg-preview (1).png')} alt="AllerGen AI Logo" style={{height: '2.8rem', width: '2.8rem', objectFit: 'contain', marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle'}} />
-            <span style={{fontSize: '1.7rem', fontWeight: 700, letterSpacing: '0.03em', color: '#1e40af', display: 'inline-block', verticalAlign: 'middle'}}>AllerGen AI</span>
+            <img src={require('./A_logo_in_vector_graphic_format_is_displayed_on_a_-removebg-preview (1).png')} alt="AllerGEN AI Logo" style={{height: '3.5rem', width: '3.5rem', objectFit: 'contain', marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle'}} />
+            <span style={{fontSize: '1.7rem', fontWeight: 700, letterSpacing: '0.03em', color: '#1e40af', display: 'inline-block', verticalAlign: 'middle'}}>AllerGEN AI</span>
           </button>
         </div>
         
@@ -110,7 +110,7 @@ const Header: React.FC = () => {
           {isMainPage && (
             <>
               <a href="#upload" onClick={closeMenu} className="nav-highlight">Begin Analysis</a>
-              <a href="#how-it-works" onClick={closeMenu}>Features</a>
+              <a href="#how-it-works" onClick={closeMenu}>Why AllerGEN</a>
               <a href="#pricing" onClick={closeMenu}>Pricing</a>
               <a href="#testimonials" onClick={closeMenu}>Validation</a>
             </>
@@ -222,4 +222,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header; 
+export default Header;

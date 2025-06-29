@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import DashboardSidebar from './DashboardSidebar';
 import './Dashboard.css';
-import { History as HistoryIcon, ClipboardList, BarChart3, CheckCircle, Trash2 } from 'lucide-react';
+import { History as HistoryIcon, ClipboardList, BarChart3, CheckCircle, Trash2, Download, FileText } from 'lucide-react';
 import { db } from './firebase';
 import { collection, query, where, getDocs, deleteDoc, doc, setDoc, getDoc, addDoc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useAccessControl } from './hooks/useAccessControl';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface LogProduct {
   name: string;
@@ -431,6 +433,193 @@ const History: React.FC = () => {
     }
   };
 
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    let currentY = 30;
+
+    // Title
+    doc.setFontSize(24);
+    doc.setTextColor(14, 165, 233);
+    doc.text('AllerGEN AI - Medical Report', 20, currentY);
+    currentY += 15;
+
+    // Patient info
+    doc.setFontSize(12);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, currentY);
+    currentY += 7;
+    doc.text(`Patient: ${user?.displayName || user?.email || 'Unknown'}`, 20, currentY);
+    currentY += 7;
+    doc.text(`Total Logs: ${logs.length}`, 20, currentY);
+    currentY += 7;
+    if (logs.length > 0) {
+      doc.text(`Date Range: ${new Date(logs[logs.length - 1].time).toLocaleDateString()} - ${new Date(logs[0].time).toLocaleDateString()}`, 20, currentY);
+      currentY += 10;
+    }
+
+    // Summary table
+    if (logs.length > 0) {
+      const summaryData = logs.map((log, index) => [
+        `Log #${logs.length - index}`,
+        new Date(log.time).toLocaleDateString(),
+        `${log.severity}/5`,
+        log.symptoms.slice(0, 2).join(', ') + (log.symptoms.length > 2 ? '...' : ''),
+        log.products.length > 0 ? log.products[0].name : 'None'
+      ]);
+      autoTable(doc, {
+        startY: currentY + 5,
+        head: [['Log #', 'Date', 'Severity', 'Symptoms', 'Primary Product']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [14, 165, 233],
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: 30
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        margin: { right: 20, bottom: 20, left: 20 }
+      });
+      // @ts-ignore
+      currentY = (doc.lastAutoTable?.finalY || currentY) + 15;
+    }
+
+    // Detailed logs
+    logs.forEach((log, index) => {
+      if (index > 0) {
+        doc.addPage();
+        currentY = 30;
+      }
+      // Log header
+      doc.setFontSize(18);
+      doc.setTextColor(14, 165, 233);
+      doc.text(`Log #${logs.length - index}`, 20, currentY);
+      currentY += 10;
+      doc.setFontSize(12);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Date: ${new Date(log.time).toLocaleString()}`, 20, currentY);
+      currentY += 10;
+      // Basic info table
+      const basicInfoData = [
+        ['Severity Level', `${log.severity}/5`],
+        ['Symptoms', log.symptoms.join(', ')],
+        ['Symptom Description', log.symptomDesc]
+      ];
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Field', 'Value']],
+        body: basicInfoData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [14, 165, 233],
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: 30
+        },
+        columnStyles: {
+          0: { fontStyle: 'bold', fillColor: [248, 250, 252] },
+          1: { cellWidth: 120 }
+        },
+        margin: { right: 20, bottom: 20, left: 20 }
+      });
+      // @ts-ignore
+      currentY = (doc.lastAutoTable?.finalY || currentY) + 10;
+      // Products table
+      if (log.products.length > 0) {
+        const productsData = log.products.map(product => [
+          product.name,
+          product.exposureType,
+          product.commonList.join(', ')
+        ]);
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Product Name', 'Exposure Type', 'Common Allergens']],
+          body: productsData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [14, 165, 233],
+            textColor: 255,
+            fontSize: 10,
+            fontStyle: 'bold'
+          },
+          bodyStyles: {
+            fontSize: 9,
+            textColor: 30
+          },
+          margin: { right: 20, bottom: 20, left: 20 }
+        });
+        // @ts-ignore
+        currentY = (doc.lastAutoTable?.finalY || currentY) + 10;
+      }
+      // Environmental factors
+      if (log.environmentalCause && log.environmentalCause.trim()) {
+        const envData = [['Environmental Factors', log.environmentalCause]];
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Field', 'Value']],
+          body: envData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [14, 165, 233],
+            textColor: 255,
+            fontSize: 10,
+            fontStyle: 'bold'
+          },
+          bodyStyles: {
+            fontSize: 10,
+            textColor: 30
+          },
+          columnStyles: {
+            0: { fontStyle: 'bold', fillColor: [248, 250, 252] },
+            1: { cellWidth: 120 }
+          },
+          margin: { right: 20, bottom: 20, left: 20 }
+        });
+        // @ts-ignore
+        currentY = (doc.lastAutoTable?.finalY || currentY) + 10;
+      }
+      // AI Analysis
+      if (log.aiAnalysis && log.aiAnalysis.trim()) {
+        const aiData = [['AI Analysis', log.aiAnalysis]];
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Field', 'Value']],
+          body: aiData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [14, 165, 233],
+            textColor: 255,
+            fontSize: 10,
+            fontStyle: 'bold'
+          },
+          bodyStyles: {
+            fontSize: 10,
+            textColor: 30
+          },
+          columnStyles: {
+            0: { fontStyle: 'bold', fillColor: [248, 250, 252] },
+            1: { cellWidth: 120 }
+          },
+          margin: { right: 20, bottom: 20, left: 20 }
+        });
+        // @ts-ignore
+        currentY = (doc.lastAutoTable?.finalY || currentY) + 10;
+      }
+    });
+    // Save the PDF
+    doc.save(`allergen_medical_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="dashboard-layout">
       <style>
@@ -487,10 +676,48 @@ const History: React.FC = () => {
             }}>
               <HistoryIcon size={36} color="#fff" />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
-              <h2 style={{ fontWeight: 800, fontSize: 30, color: '#0ea5e9', letterSpacing: 0.5, textAlign: 'center', margin: 0 }}>History</h2>
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
+                <h2 style={{ fontWeight: 800, fontSize: 30, color: '#0ea5e9', letterSpacing: 0.5, textAlign: 'center', margin: 0 }}>History</h2>
+              </div>
+              <p style={{ color: '#64748b', fontSize: 18, textAlign: 'center' }}>Track patterns, update records, and export data for your care team</p>
+              
+              {/* PDF Export Button */}
+              {logs.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <button
+                    onClick={generatePDF}
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 12,
+                      padding: '12px 24px',
+                      fontSize: 16,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      margin: '0 auto',
+                      boxShadow: '0 4px 16px rgba(34, 197, 94, 0.25)',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(34, 197, 94, 0.35)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(34, 197, 94, 0.25)';
+                    }}
+                  >
+                    <FileText size={20} />
+                    Export Medical Report (PDF)
+                  </button>
+                </div>
+              )}
             </div>
-            <p style={{ color: '#64748b', fontSize: 18, textAlign: 'center' }}>View and manage your allergy reaction logs.</p>
           </div>
           
           {/* Tab Navigation */}

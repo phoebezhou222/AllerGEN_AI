@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
           <div className="dashboard-content">
             <div className="dashboard-header">
               <h1>Welcome, {user.displayName || 'Clinical User'}!</h1>
-              <p>Access your allergen detection tools and analysis history.</p>
+              <p>Track, analyze, and understand your allergens</p>
             </div>
 
             <div className="dashboard-grid">
@@ -66,7 +66,7 @@ const Dashboard: React.FC = () => {
               <div className="dashboard-card">
                 <div className="card-icon"><BarChart3 /></div>
                 <h3>Analysis</h3>
-                <p>Access AI-powered allergen analysis and reports.</p>
+                <p>Get AI-powered insights into your potential allergens and personalized reports.</p>
                 <button className="card-button" onClick={() => navigate('/dashboard/analysis')}>
                   Go to Analysis
                 </button>

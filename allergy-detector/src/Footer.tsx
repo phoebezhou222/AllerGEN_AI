@@ -21,8 +21,8 @@ const Footer: React.FC = () => {
       <div className="footer-content">
         <div className="footer-section">
           <div style={{display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem'}}>
-            <img src={require('./A_logo_in_vector_graphic_format_is_displayed_on_a_-removebg-preview (1).png')} alt="AllerGen AI Logo" style={{height: '2.2rem', width: '2.2rem', objectFit: 'contain', marginRight: '0.3rem'}} />
-            <h3 style={{margin: 0}}>AllerGen AI</h3>
+            <img src={require('./A_logo_in_vector_graphic_format_is_displayed_on_a_-removebg-preview (1).png')} alt="AllerGEN AI Logo" style={{height: '2.8rem', width: '2.8rem', objectFit: 'contain', marginRight: '0.3rem'}} />
+            <h3 style={{margin: 0}}>AllerGEN AI</h3>
           </div>
           <p>Advanced AI-powered allergen detection for clinical applications. FDA registered medical device.</p>
         </div>
